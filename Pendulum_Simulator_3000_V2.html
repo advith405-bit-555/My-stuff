@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pendulum Simulator 3000</title><style>
+*{box-sizing:border-box}body{margin:0;background:#080d19;color:#f5f8ff;font-family:Arial,sans-serif}.wrap{max-width:1050px;margin:auto;padding:18px}
+h1{text-align:center;color:#7ee7ff;margin:5px}.sub{text-align:center;color:#aebbd3}.panel{background:#121c30;border:1px solid #2b3a58;border-radius:20px;padding:16px}
+canvas{display:block;width:100%;height:auto;background:#0a1020;border-radius:16px;touch-action:none}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+button,label{border:1px solid #354767;background:#1d2b46;color:white;border-radius:11px;padding:11px 14px;font-weight:bold}#start{background:#55d6be;color:#07151a}
+input{accent-color:#55d6be}.stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;color:#aebbd3}.stats b{color:white}.help{margin-top:13px;background:#0d1526;border-radius:12px;padding:13px;color:#d9e3f4}
+</style></head><body><div class="wrap"><h1>🕰️ PENDULUM SIMULATOR 3000</h1><p class="sub">Drag the bob, release it, and gravity takes over.</p>
+<div class="panel"><canvas id="sim" width="1000" height="520"></canvas><div class="controls">
+<button id="reset">↻ RESET</button><label>Length <input id="length" type="range" min="120" max="300" value="190"> <span id="lv">190</span></label>
+</div><div class="stats"><span>Time period: <b id="period">—</b> s</span><span>Cycles: <b id="cycles">0</b></span><span>Status: <b id="status">Drag the bob</b></span></div>
+<div class="help">🖱️ <b>Drag the yellow bob to one side.</b> Release it and it will automatically swing under gravity. No Start button needed. The faded dots show recent positions.</div>
+</div></div>
+<script>
+(()=>{const c=document.getElementById('sim'),ctx=c.getContext('2d'),len=document.getElementById('length'),lv=document.getElementById('lv'),period=document.getElementById('period'),cycles=document.getElementById('cycles'),status=document.getElementById('status');
+let dragging=false,theta=.62,omega=0,last=performance.now(),phase=0,trail=[],lastDragTime=0,lastDragTheta=.62;
+function W(){return c.clientWidth||1000}function resize(){let w=Math.max(320,Math.min(1050,c.parentElement.clientWidth||1000)),d=Math.min(2,devicePixelRatio||1);c.style.height=Math.round(w*.52)+'px';c.width=w*d;c.height=Math.round(w*.52*d);ctx.setTransform(d,0,0,d,0,0)}
+function g(){let L=+len.value,px=W()/2,py=70;return{L,px,py,bx:px+L*Math.sin(theta),by:py+L*Math.cos(theta)}}
+function pos(e){let r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function down(e){let p=pos(e),q=g();if(Math.hypot(p.x-q.bx,p.y-q.by)<52){dragging=true;omega=0;trail=[];lastDragTheta=theta;lastDragTime=performance.now();status.textContent='Dragging — release to swing';c.setPointerCapture?.(e.pointerId);e.preventDefault()}}
+function move(e){if(!dragging)return;let p=pos(e),q=g();theta=Math.atan2(p.x-q.px,p.y-q.py);let now=performance.now(),dtt=Math.max(.008,(now-lastDragTime)/1000);omega=(theta-lastDragTheta)/dtt;omega=Math.max(-6,Math.min(6,omega));lastDragTheta=theta;lastDragTime=now;trail=[];e.preventDefault()}
+function up(e){if(dragging){dragging=false;status.textContent='Swinging under gravity';try{c.releasePointerCapture?.(e.pointerId)}catch(_){} }}
+c.addEventListener('pointerdown',down);c.addEventListener('pointermove',move);c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
+document.getElementById('reset').onclick=()=>{theta=.62;omega=0;phase=0;trail=[];status.textContent='Drag the bob'};
+len.oninput=()=>{trail=[];lv.textContent=len.value};
+function draw(now){let dt=Math.min((now-last)/1000,.025);last=now,q=g();
+if(!dragging){let L=q.L*.01,gacc=9.81;let alpha=-(gacc/L)*Math.sin(theta);omega+=alpha*dt;omega*=Math.pow(.995,dt*60);theta+=omega*dt;phase+=dt;if(Math.abs(omega)>0.002)trail.push({x:q.bx,y:q.by});if(trail.length>28)trail.shift()}
+let T=2*Math.PI*Math.sqrt(q.L*.01/9.81);period.textContent=T.toFixed(2);cycles.textContent=Math.floor(phase/T);ctx.clearRect(0,0,W(),c.clientHeight);
+for(let i=0;i<trail.length;i++){let z=trail[i],a=(i+1)/trail.length*.45;ctx.fillStyle='rgba(126,231,255,'+a+')';ctx.beginPath();ctx.arc(z.x,z.y,2+(i/trail.length)*2,0,Math.PI*2);ctx.fill()}
+ctx.fillStyle='#566985';ctx.fillRect(q.px-180,q.py-8,360,16);ctx.strokeStyle='#f5f8ff';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(q.px,q.py);ctx.lineTo(q.bx,q.by);ctx.stroke();
+ctx.fillStyle='#7ee7ff';ctx.beginPath();ctx.arc(q.px,q.py,7,0,Math.PI*2);ctx.fill();ctx.shadowColor='#ffcf5a';ctx.shadowBlur=18;ctx.fillStyle='#ffcf5a';ctx.beginPath();ctx.arc(q.bx,q.by,27,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.font='18px Arial';ctx.fillText('BOB',q.bx+35,q.by+6);requestAnimationFrame(draw)}
+window.addEventListener('resize',resize);resize();requestAnimationFrame(draw)})();
+</script></body></html>
